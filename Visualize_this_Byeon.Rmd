@@ -1,0 +1,198 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1. Introduction
+
+```{r}
+getwd()
+```
+
+
+2. Make appropriate data
+
+```{r}
+library(tidyverse)
+library(readxl)
+data1a <- read_excel("mmc1.xlsx", sheet='Table S1A_clinical_103patient', na="NA")
+
+
+#data1c <- read_excel("mmc1.xlsx", sheet='Table S1C_SNV', range = "A2:DA10603", na="NA") %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
+#data1c
+
+#tdata1c <- as.data.frame(t(data1c))
+#tdata1c <- rownames_to_column(tdata1c, var="ID")
+#tdata1c <- tdata1c %>% filter(!ID %in% c("Gene", "COUNT", "%"))
+#names(tdata1c)[2:7] <- c("MCM2", "MCM6", "MCM3", "MCM7", "MCM4")
+#mdata1a1c <- merge(data1a, tdata1c, by = "ID")
+#mdata1a1c
+
+#data1d <- read_excel("mmc1.xlsx", sheet='Table S1D_transcriptome_log2TN', na="NA") %>% filter(gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
+#data1d
+
+data1e <- read_xlsx("mmc1.xlsx", sheet='Table S1E_ProteomeLog2TN', na="NA") %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EGFR"))
+
+
+#data3d <- read_xlsx("mmc3.xlsx", sheet='S3D.protein (p)QTL', na="NA")
+#names(data3d)[1] <- "Gene"
+#data3d <- data3d %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
+#data3d
+
+#data3e <- read_xlsx("mmc3.xlsx", sheet='S3E.TP53 mut related_mRNA_Prot', na="NA", range="A2:J183")
+#names(data3e)[3:10] <- c("median_wtTP53_mut_mRNA", "median_mutTP53_mRNA", "mut/wt_TP53_foldchange_mRNA", "TP53_wtvsmutPvalue_mRNA", "median_wtTP53_mut_Protein", "median_mutTP53_Protein", "mut/wt_TP53_foldchange_Protein", "TP53_wtvsmutPvalue_protein")
+#data3e
+
+tdata1e <- as.data.frame(t(data1e))
+tdata1e <- rownames_to_column(tdata1e, var = "ID") %>% filter(!ID %in% c("Accession", "Gene", "Protein"))
+names(tdata1e) <- c('ID', 'EGFR_log2T/N_P', 'MCM3_log2T/N_P', 'MCM4_log2T/N_P', 'MCM5_log2T/N_P', 'MCM7_log2T/N_P', 'MCM2_log2T/N_P', 'MCM6_log2T/N_P')
+
+mdata1at1e <- merge(data1a, tdata1e, by='ID')
+mdata1at1e <- mdata1at1e %>% mutate( `EGFR_log2T/N_P` = as.numeric(`EGFR_log2T/N_P`),
+                                     `MCM3_log2T/N_P`= as.numeric(`MCM3_log2T/N_P`) ,
+                                    `MCM4_log2T/N_P` = as.numeric(`MCM4_log2T/N_P`) ,
+                                    `MCM5_log2T/N_P` = as.numeric(`MCM5_log2T/N_P`) ,
+                                    `MCM6_log2T/N_P` = as.numeric(`MCM6_log2T/N_P`) ,
+                                    `MCM7_log2T/N_P` = as.numeric(`MCM7_log2T/N_P`) ,
+                                    `MCM2_log2T/N_P` = as.numeric(`MCM2_log2T/N_P`),
+                                    `Mean_MCM_log2T/N_P` = (`MCM3_log2T/N_P`+`MCM4_log2T/N_P` + `MCM5_log2T/N_P` + `MCM6_log2T/N_P` + `MCM7_log2T/N_P` + `MCM2_log2T/N_P`)/6, 
+                                    Stage = case_when(Stage == "IA" ~ "IA", 
+                                                      Stage == "IB" ~ "IB", 
+                                                      Stage == "IIA" ~ "IIA", 
+                                                      Stage == "IIB" ~ "IIB", 
+                                                      TRUE ~ "Late"))
+data1a
+data1e
+tdata1e
+mdata1at1e
+```
+
+
+3. What plot is best?
+
+```{r paged.print=TRUE}
+#library(patchwork)
+#library(ggplot2)
+#library(cowplot)
+library(RColorBrewer)
+#inc <- mdata1at1e %>% summarise(m = sum(`Mean_MCM_log2T/N_P`)/sum(`EGFR_log2T/N_P`)) %>% pull(m)
+
+mcm_m <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`Mean_MCM_log2T/N_P`, `EGFR_log2T/N_P`, color= Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM Mean") +
+  xlab("Mean_MCM") +
+  ylab("EGFR") +
+  guides(alpha=FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0) +
+  theme(legend.position = "right")
+  
+  
+mcm2 <-  mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM2_log2T/N_P`, `EGFR_log2T/N_P`, color = Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM2") +
+  xlab("MCM2") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+
+mcm3 <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM3_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM3") +
+  xlab("MCM3") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+
+mcm4 <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM4_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM4") +
+  xlab("MCM4") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+  
+mcm5 <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM5_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM5") +
+  xlab("MCM5") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+
+mcm6 <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM6_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM6") +
+  xlab("MCM6") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+
+mcm7 <- mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`MCM7_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5)) +
+  ggtitle("EGFRvsMCM7") +
+  xlab("MCM7") +
+  ylab("EGFR") +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0)
+
+first <- plot_grid(mcm2, mcm3, labels = c('A', 'B'), label_size = 12)
+second <- plot_grid(mcm4, mcm5, labels = c('C', 'D'), label_size = 12)
+third <- plot_grid(mcm6, mcm7, labels = c('E', 'F'), label_size = 12)
+plot_grid(first, second, third, mcm_m, labels = c('', '', '', 'G'), label_size = 12, ncol = 1)
+
+mcm2 + mcm4 + mcm3 + mcm5 + mcm6 + mcm7 + mcm_m + plot_layout(ncol=2, widths = 1, heights = 3)
+
+#plot_grid(mcm2, mcm3, mcm4, mcm5, mcm6, mcm7, mcm_m, labels = c('A', 'B', 'C', 'D', 'E', 'F', 'G'), label_size = 12, ncol = 2) + coord_fixed(ratio=0.707)
+  # +
+  #
+  #par(mar = c(1,1,1,1))
+```
+
+
+```{r}
+mdata1at1e %>% 
+  group_by(Stage, EGFR_Status) %>%
+  ggplot() + 
+  geom_point(aes(`Mean_MCM_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5, size = Stage)) +
+  scale_color_brewer(palette = "RdGn") +
+  ggtitle("EGFRvsMCM Mean") +
+  xlab("Mean_MCM") +
+  ylab("EGFR") +
+  guides(alpha=FALSE) +
+  geom_hline(color="blue", yintercept = 0) +
+  geom_vline(color="blue", xintercept = 0) +
+  theme(legend.position = "right")
+  
+```
+EGFR downregulated, MVM upregulated, Stage proceed -> 0,0 to EGFR down, MCM up trend, 
+
+
+1. geom_point plot으로 진행한다
+2. 다른 plot으로 시도해 본다.
+
+4. Disscussion
+
+
+
+
