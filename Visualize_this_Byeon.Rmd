@@ -175,21 +175,21 @@ mdata1at1e %>%
   group_by(Stage, EGFR_Status) %>%
   ggplot() + 
   geom_point(aes(`Mean_MCM_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5, size = Stage)) +
-  scale_color_brewer(palette = "RdGn") +
+  scale_color_brewer(palette = "RdYlGn") +
   ggtitle("EGFRvsMCM Mean") +
   xlab("Mean_MCM") +
   ylab("EGFR") +
   guides(alpha=FALSE) +
   geom_hline(color="blue", yintercept = 0) +
   geom_vline(color="blue", xintercept = 0) +
-  theme(legend.position = "right")
-  
+  theme(legend.position = "right") +
+  facet_wrap(. ~ Stage)
 ```
-EGFR downregulated, MVM upregulated, Stage proceed -> 0,0 to EGFR down, MCM up trend, 
+EGFR downregulated, MVM upregulated, Stage proceed -> 0,0 to EGFR down, MCM up trend, right down
 
 
 1. geom_point plot으로 진행한다
-2. 다른 plot으로 시도해 본다.
+2. 스테이지를 나타내는 점들 사이의 평균을 가지는 점에 택스트 출력
 
 4. Disscussion
 
