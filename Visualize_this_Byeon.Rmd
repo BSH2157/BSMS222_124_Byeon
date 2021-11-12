@@ -1,52 +1,62 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 1. Introduction
 
+What is the MCM? :
+Minichromosome maintenance Mini chromosome maintenance complex (or minichromosome maintenance protein complex, or mini-chromosome maintenance (MCM) 2-7 helicase complex ) has a role in both the initiation and the elongation phases of eukaryotic "DNA replication", specifically the formation and elongation of the replication fork. MCM is a component of the pre-replication complex, which is a component of the licensing factor. MCM is a hexamer of six related polypeptides (MCM2 through MCM7) that form a ring structure. 
+
+In this paper, by survey QTL with TP53, they could find the correlation between TP53 and MCM that MCM log2T/N showed a strong positive association with TP53 mutations(In figure 3F, S3D). Therefore, as they mentioned the correlation between the TP53 gene and the gene involved in DNA replication,(Figure 2I, 2J) the correlation with MCM seems natural.
+
+Why EGFR and MCM?:
+The mutation of the EGFR gene is the most main factor in TW cohort. Therefore, I intend to confirm the correlation between the EGFR gene and the DNA replication gene MCM, and furthermore, the protein expression of the two genes according to Tumor Stage.
+
+2. Make appropriate data
+
+To visualize plot, I need to make appropriate data frame first. Let's check the working directory.
+
 ```{r}
 getwd()
 ```
-
-
-2. Make appropriate data
+Now, download the table data in workind directory, and refine and merge them to one data.
 
 ```{r}
 library(tidyverse)
 library(readxl)
+
 data1a <- read_excel("mmc1.xlsx", sheet='Table S1A_clinical_103patient', na="NA")
 
-
-#data1c <- read_excel("mmc1.xlsx", sheet='Table S1C_SNV', range = "A2:DA10603", na="NA") %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
-#data1c
-
-#tdata1c <- as.data.frame(t(data1c))
-#tdata1c <- rownames_to_column(tdata1c, var="ID")
-#tdata1c <- tdata1c %>% filter(!ID %in% c("Gene", "COUNT", "%"))
-#names(tdata1c)[2:7] <- c("MCM2", "MCM6", "MCM3", "MCM7", "MCM4")
-#mdata1a1c <- merge(data1a, tdata1c, by = "ID")
-#mdata1a1c
-
-#data1d <- read_excel("mmc1.xlsx", sheet='Table S1D_transcriptome_log2TN', na="NA") %>% filter(gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
-#data1d
+#In this data(Table S1, and others), have a multiple sheet so, when I load data, I should call correct sheet.
 
 data1e <- read_xlsx("mmc1.xlsx", sheet='Table S1E_ProteomeLog2TN', na="NA") %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EGFR"))
 
+data1a
+data1e
 
-#data3d <- read_xlsx("mmc3.xlsx", sheet='S3D.protein (p)QTL', na="NA")
-#names(data3d)[1] <- "Gene"
-#data3d <- data3d %>% filter(Gene %in% c("MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "EFGR", "TP53"))
-#data3d
+```
 
-#data3e <- read_xlsx("mmc3.xlsx", sheet='S3E.TP53 mut related_mRNA_Prot', na="NA", range="A2:J183")
-#names(data3e)[3:10] <- c("median_wtTP53_mut_mRNA", "median_mutTP53_mRNA", "mut/wt_TP53_foldchange_mRNA", "TP53_wtvsmutPvalue_mRNA", "median_wtTP53_mut_Protein", "median_mutTP53_Protein", "mut/wt_TP53_foldchange_Protein", "TP53_wtvsmutPvalue_protein")
-#data3e
+Look at that datas. They have a different column and row array. I want to merge two data by patients ID, but data1e is array patients along the column names. So I need to flip it and refine this before merge them.
 
+```{r}
+#To flip it, I used function t. t flip the data's row and column but the output is metrix. So I transform it to dataframe by as.data.frame function.
 tdata1e <- as.data.frame(t(data1e))
-tdata1e <- rownames_to_column(tdata1e, var = "ID") %>% filter(!ID %in% c("Accession", "Gene", "Protein"))
-names(tdata1e) <- c('ID', 'EGFR_log2T/N_P', 'MCM3_log2T/N_P', 'MCM4_log2T/N_P', 'MCM5_log2T/N_P', 'MCM7_log2T/N_P', 'MCM2_log2T/N_P', 'MCM6_log2T/N_P')
+tdata1e
+```
 
+What happend? The column names in data1e was changed to tdata1e's rownames. And new column names was defined with Vn.
+So, let's change rownames to column by function(The function name is literally.), and redefine other column names.
+
+
+```{r}
+tdata1e <- rownames_to_column(tdata1e, var = "ID") %>% filter(!ID %in% c("Accession", "Gene", "Protein"))
+#Because I want to get proportion data(Patients ID), I excluded the other.
+names(tdata1e) <- c('ID', 'EGFR_log2T/N_P', 'MCM3_log2T/N_P', 'MCM4_log2T/N_P', 'MCM5_log2T/N_P', 'MCM7_log2T/N_P', 'MCM2_log2T/N_P', 'MCM6_log2T/N_P')
+#Because of not ID column's in tdata1e, EGFR and MCM protein expression column's class was changed to character. So change it to numeric.
 mdata1at1e <- merge(data1a, tdata1e, by='ID')
 mdata1at1e <- mdata1at1e %>% mutate( `EGFR_log2T/N_P` = as.numeric(`EGFR_log2T/N_P`),
                                      `MCM3_log2T/N_P`= as.numeric(`MCM3_log2T/N_P`) ,
@@ -61,21 +71,25 @@ mdata1at1e <- mdata1at1e %>% mutate( `EGFR_log2T/N_P` = as.numeric(`EGFR_log2T/N
                                                       Stage == "IIA" ~ "IIA", 
                                                       Stage == "IIB" ~ "IIB", 
                                                       TRUE ~ "Late"))
-data1a
-data1e
+
+
 tdata1e
 mdata1at1e
 ```
 
+Now, data is ready. Let's draw a plot!
+
 
 3. What plot is best?
 
+To see correlation between two proportions, in this the expression level of protein in tumor, I think the point basic plot is best way. So I proceed visualizing with point plot.
+
+
 ```{r paged.print=TRUE}
-#library(patchwork)
-#library(ggplot2)
-#library(cowplot)
+library(patchwork)
+library(ggplot2)
+library(cowplot)
 library(RColorBrewer)
-#inc <- mdata1at1e %>% summarise(m = sum(`Mean_MCM_log2T/N_P`)/sum(`EGFR_log2T/N_P`)) %>% pull(m)
 
 mcm_m <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -84,10 +98,10 @@ mcm_m <- mdata1at1e %>%
   ggtitle("EGFRvsMCM Mean") +
   xlab("Mean_MCM") +
   ylab("EGFR") +
-  guides(alpha=FALSE) +
+  guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
   geom_vline(color="blue", xintercept = 0) +
-  theme(legend.position = "right")
+  coord_fixed(ratio=0.707)
   
   
 mcm2 <-  mdata1at1e %>% 
@@ -99,7 +113,8 @@ mcm2 <-  mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
 
 mcm3 <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -110,7 +125,8 @@ mcm3 <- mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
 
 mcm4 <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -121,7 +137,8 @@ mcm4 <- mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
   
 mcm5 <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -132,7 +149,8 @@ mcm5 <- mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
 
 mcm6 <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -143,7 +161,8 @@ mcm6 <- mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
 
 mcm7 <- mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
@@ -154,45 +173,114 @@ mcm7 <- mdata1at1e %>%
   ylab("EGFR") +
   guides(alpha=FALSE, color = FALSE, shape = FALSE) +
   geom_hline(color="blue", yintercept = 0) +
-  geom_vline(color="blue", xintercept = 0)
-
-first <- plot_grid(mcm2, mcm3, labels = c('A', 'B'), label_size = 12)
-second <- plot_grid(mcm4, mcm5, labels = c('C', 'D'), label_size = 12)
-third <- plot_grid(mcm6, mcm7, labels = c('E', 'F'), label_size = 12)
-plot_grid(first, second, third, mcm_m, labels = c('', '', '', 'G'), label_size = 12, ncol = 1)
-
-mcm2 + mcm4 + mcm3 + mcm5 + mcm6 + mcm7 + mcm_m + plot_layout(ncol=2, widths = 1, heights = 3)
-
-#plot_grid(mcm2, mcm3, mcm4, mcm5, mcm6, mcm7, mcm_m, labels = c('A', 'B', 'C', 'D', 'E', 'F', 'G'), label_size = 12, ncol = 2) + coord_fixed(ratio=0.707)
-  # +
-  #
-  #par(mar = c(1,1,1,1))
+  geom_vline(color="blue", xintercept = 0) +
+  coord_fixed(ratio=0.707)
+title <- draw_figure_label("Figure1. Correlation of EGFR vs MCM subunit", position = "top") 
+p <- plot_grid(mcm2, mcm3, mcm4, mcm5, mcm6, mcm7, mcm_m, ncol = 2, labels = "AUTO", align = "hv")
+#p <- plot_grid(title, p, ncol=1)
+#leg <- get_legend(mcm_m) + theme(legend.position = "bottom")
+#plot_grid(p, leg, ncol = 1)
+p
+ 
 ```
+
 
 
 ```{r}
+
+mean_point_IA <- mdata1at1e %>% 
+  filter(Stage == "IA") %>% 
+  group_by(Stage) %>% 
+  summarise(`point_mean_of_mcm` = sum(`Mean_MCM_log2T/N_P`)/40,
+            `point_of_EGFR` = sum(`EGFR_log2T/N_P`)/40)
+
+mean_point_IB <- mdata1at1e %>% 
+  filter(Stage == "IB") %>% 
+  group_by(Stage) %>% 
+  summarise(`point_mean_of_mcm` = sum(`Mean_MCM_log2T/N_P`)/31, 
+            `point_of_EGFR` = sum(`EGFR_log2T/N_P`)/31)
+
+mean_point_IIA <- mdata1at1e %>% 
+  filter(Stage == "IIA") %>% 
+  group_by(Stage) %>% 
+  summarise(`point_mean_of_mcm` = sum(`Mean_MCM_log2T/N_P`)/5, 
+            `point_of_EGFR` = sum(`EGFR_log2T/N_P`)/5)
+
+mean_point_Late <- mdata1at1e %>% 
+  filter(Stage == "Late") %>% 
+  group_by(Stage) %>% 
+  group_by(Stage) %>% 
+  summarise(`point_mean_of_mcm` = sum(`Mean_MCM_log2T/N_P`)/12, 
+            `point_of_EGFR` = sum(`EGFR_log2T/N_P`)/12)
+
 mdata1at1e %>% 
   group_by(Stage, EGFR_Status) %>%
   ggplot() + 
-  geom_point(aes(`Mean_MCM_log2T/N_P`, `EGFR_log2T/N_P`, color=Stage, shape = EGFR_Status, alpha=0.5, size = Stage)) +
+  geom_point(aes(`Mean_MCM_log2T/N_P`, 
+                 `EGFR_log2T/N_P`, 
+                 color=Stage, 
+                 shape = EGFR_Status, 
+                 alpha=0.5, 
+                 size = Stage)) +
+  
+  geom_point(data = mean_point_IA, 
+             aes(`point_mean_of_mcm`, 
+                 `point_of_EGFR`)) +
+  
+  geom_text(data = mean_point_IA, 
+            aes(`point_mean_of_mcm`, 
+                `point_of_EGFR`-0.25, 
+                label= paste("(", as.character(round(`point_mean_of_mcm`, digits = 3)), ", ", as.character(round(`point_of_EGFR`, digits = 3)), ")")), size=3) +
+  
+  geom_point(data = mean_point_IB, 
+             aes(`point_mean_of_mcm`, 
+                 `point_of_EGFR`)) + 
+  
+  geom_text(data = mean_point_IB, 
+            aes(`point_mean_of_mcm`, 
+                `point_of_EGFR`-0.25, 
+                label= paste("(", as.character(round(`point_mean_of_mcm`, digits = 3)), ", ", as.character(round(`point_of_EGFR`, digits = 3)), ")")), size=3) +
+  
+  geom_point(data = mean_point_IIA, 
+             aes(`point_mean_of_mcm`, 
+                 `point_of_EGFR`)) +
+  
+  geom_text(data = mean_point_IIA, 
+            aes(`point_mean_of_mcm`, 
+                `point_of_EGFR`-0.25, 
+                label= paste("(", as.character(round(`point_mean_of_mcm`, digits = 3)), ", ", as.character(round(`point_of_EGFR`, digits = 3)), ")")), size=3) +
+  
+  geom_point(data = mean_point_Late, 
+             aes(`point_mean_of_mcm`, 
+                 `point_of_EGFR`)) +
+  
+  geom_text(data = mean_point_Late, 
+            aes(`point_mean_of_mcm`, 
+                `point_of_EGFR`-0.25, 
+                label= paste("(", as.character(round(`point_mean_of_mcm`, digits = 3)), ", ", as.character(round(`point_of_EGFR`, digits = 3)), ")")), size=3) +
+  
   scale_color_brewer(palette = "RdYlGn") +
-  ggtitle("EGFRvsMCM Mean") +
+  
+  ggtitle("Figure2. EGFRvsMCM Mean compare tumor stage") +
+  
   xlab("Mean_MCM") +
+  
   ylab("EGFR") +
+  
   guides(alpha=FALSE) +
+  
   geom_hline(color="blue", yintercept = 0) +
+  
   geom_vline(color="blue", xintercept = 0) +
+  
   theme(legend.position = "right") +
+  
   facet_wrap(. ~ Stage)
 ```
-EGFR downregulated, MVM upregulated, Stage proceed -> 0,0 to EGFR down, MCM up trend, right down
-
-
-1. geom_point plot으로 진행한다
-2. 스테이지를 나타내는 점들 사이의 평균을 가지는 점에 택스트 출력
 
 4. Disscussion
 
-
+The figure 1 shows the correlation between EGFR and MCM subunits in protein expression level. The two figure's blue line means the protein expression both EGFR and MCM in Tumor and Normal cell is same(log2(1)=0). In figure1, we can see TW cohort's EGFR expression level in Tumore is lower than Normal cell, and MCM is opposite to that. We can see again paper's results, EGFR mutation in Tumor cause less expression of EGFR protein, and DNA replication gene's are upregulated both in RNA and protein level. And two proportion's cluster overally show downward graph. And, the MCM subunit that contributes the most to it can be identified as subunit 3 (left area of the mcm blue line) with the smallest first and third quadrants.
+Figure 2 shows the correlation compare to Tumor stage. Black point show's the mean coordinates of each point. IIA and LAte Stage, IIB number of samples is too small to be suitable for analysis.(each size is 5, 12, 1) So We compare two, IA and IB. In figure, the IA stage black point is a little close to origin than IB. In fact, the result of two stages(IA, IB) are not much of difference, but this was contrary to my expectation that the lower the right direction would accelerate as the level of the tumor stage increased. So, I think that there is no right downward deepening according to Stage, and the protein expression of the two genes is move within a predetermined range. Another limitation is that a more precise analysis could not be performed due to a lack of samples of other stages.
 
 
